@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Ingresar</title>
+<link rel="stylesheet" href="style.css">
+<script src="boleta.js"></script>
+</head>
+<body>
+
+<div class="container" id="vistaLogin">
+  <img src="assets/logo.png" alt="" class="logo-login logo-negocio">
+  <h1 class="nombre-negocio">Tu negocio</h1>
+  <p>Ingresa tu usuario y contraseña</p>
+  <label>Usuario</label>
+  <input type="text" id="loginUsuario" placeholder="Usuario">
+  <label>Contraseña</label>
+  <input type="password" id="loginPassword" placeholder="********">
+  <div class="error oculto" id="loginError"></div>
+  <button id="btnLogin">Ingresar</button>
+  <p class="enlace" id="irRecuperar">Olvidé mi contraseña</p>
+  <button id="btnSalirApp" class="secundario" style="margin-top:16px;">Salir del sistema</button>
+</div>
+
+<div class="container oculto" id="vistaRecuperarPaso1">
+  <h2>Recuperar contraseña</h2>
+  <label>Usuario</label>
+  <input type="text" id="recUsuario">
+  <div class="error oculto" id="recError1"></div>
+  <button id="btnBuscarPregunta">Continuar</button>
+  <p class="enlace" id="volverLogin1">Volver a ingresar</p>
+</div>
+
+<div class="container oculto" id="vistaRecuperarPaso2">
+  <h2>Pregunta de seguridad</h2>
+  <p id="preguntaTexto"></p>
+  <label>Respuesta</label>
+  <input type="text" id="recRespuesta">
+  <label>Nueva contraseña</label>
+  <input type="password" id="recNuevaPassword">
+  <div class="error oculto" id="recError2"></div>
+  <div class="exito oculto" id="recExito"></div>
+  <button id="btnCambiarPassword">Cambiar contraseña</button>
+  <p class="enlace" id="volverLogin2">Volver a ingresar</p>
+</div>
+
+<script src="login.js"></script>
+</body>
+</html>

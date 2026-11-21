@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Conectar base de datos</title>
+<link rel="stylesheet" href="style.css">
+<script src="boleta.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <img src="assets/logo.png" alt="" class="logo-login logo-negocio">
+  <h2>Conectar base de datos</h2>
+  <p id="mensaje">Ingresa los datos de tu servidor MySQL. Se guardan cifrados en este equipo y no se vuelven a pedir.</p>
+  <div class="grid-2">
+    <div><label>Servidor</label><input type="text" id="dbHost" value="localhost"></div>
+    <div><label>Puerto</label><input type="number" id="dbPort" value="3306"></div>
+  </div>
+  <label>Usuario de MySQL</label>
+  <input type="text" id="dbUser" value="root">
+  <label>Contraseña de MySQL</label>
+  <input type="password" id="dbPassword">
+  <div class="error oculto" id="dbError"></div>
+  <button id="btnConectar">Conectar</button>
+  <button id="btnSalirApp" class="secundario" style="margin-top:16px;">Salir del sistema</button>
+</div>
+
+<script src="config-db.js"></script>
+</body>
+</html>

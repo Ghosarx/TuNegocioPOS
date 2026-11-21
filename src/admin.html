@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Administrador</title>
+<link rel="stylesheet" href="style.css">
+<script src="boleta.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div><span class="nombre-negocio">Tu negocio</span> - Panel de administrador (<span id="nombreAdmin"></span>)</div>
+  <div class="tabs">
+    <button id="tabInventario" class="activo">Inventario</button>
+    <button id="tabInsumos">Insumos</button>
+    <button id="tabEmpleados">Empleados</button>
+    <button id="tabVentas">Ventas del día</button>
+    <button id="tabBoleta">Boleta</button>
+    <button id="tabCuenta">Mi cuenta</button>
+    <button id="btnSalir" class="secundario">Salir</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- INVENTARIO -->
+  <div id="vistaInventario">
+    <h2>Inventario</h2>
+    <div class="tarjeta">
+      <h3>Agregar producto</h3>
+      <div class="grid-2">
+        <div><label>Nombre</label><input type="text" id="invNombre"></div>
+        <div><label>Categoría</label><select id="invCategoria"></select></div>
+        <div><label>Precio (S/)</label><input type="number" step="0.01" id="invPrecio"></div>
+      </div>
+      <button id="btnAgregarProducto">Agregar al inventario</button>
+    </div>
+    <table>
+      <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acciones</th></tr></thead>
+      <tbody id="tablaInventario"></tbody>
+    </table>
+  </div>
+
+  <!-- INSUMOS (inventario contable de materia prima, KG/LT) -->
+  <div id="vistaInsumos" class="oculto">
+    <h2>Insumos</h2>
+    <p>Inventario contable de materia prima. No se vende directamente ni aparece en la pantalla de venta.</p>
+    <div class="tarjeta">
+      <h3>Agregar insumo</h3>
+      <div class="grid-2">
+        <div><label>Nombre</label><input type="text" id="insNombre"></div>
+        <div><label>Unidad</label>
+          <select id="insUnidad">
+            <option value="KG">KG</option>
+            <option value="LT">LT</option>
+            <option value="UND">UND</option>
+          </select>
+        </div>
+        <div><label>Cantidad inicial</label><input type="number" step="0.01" min="0" id="insCantidad" value="0"></div>
+      </div>
+      <button id="btnAgregarInsumo">Agregar al inventario de insumos</button>
+    </div>
+    <table>
+      <thead><tr><th>Nombre</th><th>Unidad</th><th>Cantidad</th><th>Acciones</th></tr></thead>
+      <tbody id="tablaInsumos"></tbody>
+    </table>
+    <h3>Recetas (se descuentan del stock en cada venta)</h3>
+    <p>Por unidad vendida. Al devolver una boleta se repone. Un stock en negativo significa que se vendió más de lo registrado.</p>
+    <table>
+      <thead><tr><th>Producto</th><th>Insumos que gasta</th></tr></thead>
+      <tbody id="tablaRecetas"></tbody>
+    </table>
+  </div>
+
+  <!-- EMPLEADOS -->
+  <div id="vistaEmpleados" class="oculto">
+    <h2>Empleados</h2>
+    <div class="tarjeta">
+      <h3>Crear nuevo empleado</h3>
+      <div class="grid-2">
+        <div><label>Nombre completo</label><input type="text" id="empNombre"></div>
+        <div><label>Usuario</label><input type="text" id="empUsuario"></div>
+        <div><label>Contraseña</label><input type="password" id="empPassword"></div>
+      </div>
+      <div class="error oculto" id="empError"></div>
+      <button id="btnCrearEmpleado">Crear empleado</button>
+    </div>
+    <table>
+      <thead><tr><th>Nombre</th><th>Usuario</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody id="tablaEmpleados"></tbody>
+    </table>
+  </div>
+
+  <!-- VENTAS DEL DIA -->
+  <div id="vistaVentas" class="oculto">
+    <h2>Ventas</h2>
+    <div class="tarjeta">
+      <label style="width:auto; display:inline-block; margin-right:8px;">Fecha</label>
+      <input type="date" id="ventasFecha" style="width:auto; display:inline-block; margin:4px 0;">
+      <br>
+      <strong>Total: S/ <span id="totalDia">0.00</span></strong>
+      &nbsp;|&nbsp; <span id="numVentasDia">0</span> ventas
+      &nbsp;|&nbsp; Descuentos: S/ <span id="descuentosDia">0.00</span>
+      &nbsp;&nbsp;<button style="width:auto; display:inline-block;" id="btnImprimirResumen">Imprimir resumen</button>
+    </div>
+    <table>
+      <thead><tr><th>Boleta</th><th>Hora</th><th>Empleado</th><th>Cliente</th><th>DNI</th><th>Pago</th><th>Descuento</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead>
+      <tbody id="tablaVentas"></tbody>
+    </table>
+  </div>
+
+  <!-- CONFIGURACION DE BOLETA -->
+  <div id="vistaBoleta" class="oculto">
+    <h2>Configuración de boleta</h2>
+    <p>Se aplica a todas las impresiones: venta, cierre de caja, devolución y resumen del día.</p>
+    <div class="grid-2" style="align-items:start;">
+      <div class="tarjeta">
+        <div class="grid-2">
+          <div><label>Ancho (mm)</label><input type="number" step="0.1" min="1" id="boletaAncho"></div>
+          <div><label>Alto (mm)</label><input type="number" step="0.1" min="1" id="boletaAlto"></div>
+        </div>
+        <label>Impresora</label>
+        <select id="boletaImpresora"></select>
+        <p style="font-size:12px; color:var(--muted); margin:-8px 0 12px;">
+          Si no hay ninguna marcada como predeterminada en Windows, elige acá cuál es tu
+          impresora de boletas (ojo con nombres parecidos o impresoras virtuales de PDF).
+        </p>
+        <label>Tipo de letra</label>
+        <select id="boletaFuente">
+          <option value="Courier New">Courier New</option>
+          <option value="Arial">Arial</option>
+          <option value="Consolas">Consolas</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Times New Roman">Times New Roman</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:8px; width:auto; margin:4px 0 12px;">
+          <input type="checkbox" id="boletaNegrita" style="width:auto; margin:0;">
+          Texto en negrita
+        </label>
+        <div class="error oculto" id="boletaError"></div>
+        <div class="exito oculto" id="boletaExito"></div>
+        <button id="btnGuardarBoleta">Guardar configuración</button>
+      </div>
+      <div class="tarjeta">
+        <h3>Vista previa</h3>
+        <div class="receipt" id="boletaPreview" style="margin:0;">
+          <div class="center"><strong class="nombre-negocio">TU NEGOCIO</strong></div>
+          <hr>
+          <div class="center"><strong>BOLETA DE VENTA ELECTRÓNICA</strong><br>B001-000001</div>
+          <div class="center">FECHA DE EMISIÓN: 01/10/2026 HORA:14:47</div>
+          <hr>
+          <div class="center">Descripción</div>
+          <div class="rline"><span>Cantidad x P.Unitario</span><span>Total</span></div>
+          <div><strong>Espresso</strong><div class="rline"><span>2 x S/ 6.00</span><span>S/ 12.00</span></div></div>
+          <hr>
+          <div class="rline"><span>OP. GRAVADA</span><span>S/ 10.17</span></div>
+          <div class="rline"><span>IGV (18%)</span><span>S/ 1.83</span></div>
+          <div class="rline"><strong>IMPORTE TOTAL</strong><strong>S/ 12.00</strong></div>
+          <hr>
+          <div class="center">SON: DOCE Y 00/100 SOLES</div>
+          <hr>
+          <div class="rline"><span>Tipo de pago</span><span>Efectivo</span></div>
+          <div class="rline"><span>Atendido por</span><span>Administrador</span></div>
+          <hr>
+          <div class="center">Gracias por su compra</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <h3>Prueba de impresión</h3>
+      <p>Imprime un tipo de boleta a la vez (uno por clic, no todas seguidas), para poder revisar el papel entre cada una.</p>
+      <p>Siguiente a imprimir: <strong id="pruebaSiguienteTipo">Venta</strong></p>
+      <button id="btnImprimirPrueba" style="width:auto;">Imprimir prueba</button>
+    </div>
+  </div>
+
+  <!-- MI CUENTA -->
+  <div id="vistaCuenta" class="oculto">
+    <h2>Mi cuenta</h2>
+    <div class="error oculto" id="cuentaAvisoPendiente" style="margin:0 0 12px; font-size:14px;"></div>
+    <div class="tarjeta" style="max-width:420px;">
+      <label>Contraseña actual</label>
+      <input type="password" id="cuentaPassActual">
+      <label>Nueva contraseña (mínimo 6 caracteres; vacía = no cambiarla)</label>
+      <input type="password" id="cuentaPassNueva">
+      <label>Nueva pregunta de seguridad (vacía = no cambiarla)</label>
+      <input type="text" id="cuentaPregunta" placeholder="Ej.: ¿Cómo se llamaba mi primera mascota?">
+      <label>Respuesta</label>
+      <input type="password" id="cuentaRespuesta">
+      <div class="error oculto" id="cuentaError"></div>
+      <div class="exito oculto" id="cuentaExito"></div>
+      <button id="btnCambiarMiPassword">Guardar cambios</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>

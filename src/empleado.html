@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Empleado</title>
+<link rel="stylesheet" href="style.css">
+<script src="boleta.js"></script>
+</head>
+<body>
+
+<!-- PANTALLA: ABRIR CAJA -->
+<div class="container" id="vistaAbrirCaja">
+  <h2>Iniciar caja</h2>
+  <p>Bienvenido, <span id="nombreEmpleadoApertura"></span></p>
+  <label>Monto inicial en caja (S/)</label>
+  <input type="number" step="0.01" id="montoInicial" placeholder="0.00">
+  <div class="error oculto" id="errorApertura"></div>
+  <button id="btnAbrirCaja">Iniciar caja y comenzar a vender</button>
+  <button id="btnSalirApertura" class="secundario">Salir</button>
+</div>
+
+<!-- APP PRINCIPAL (oculta hasta abrir caja) -->
+<div id="appPrincipal" class="oculto">
+  <div class="topbar">
+    <div><span class="nombre-negocio">Tu negocio</span> - <span id="nombreEmpleado"></span></div>
+    <div class="tabs">
+      <button id="tabVenta" class="activo">Venta rápida</button>
+      <button id="tabMesas">Mesas</button>
+      <button id="tabVentasEmp">Ventas</button>
+      <button id="tabClientes">Clientes</button>
+      <button id="btnCerrarCaja" class="secundario">Cerrar caja</button>
+      <button id="btnSalir" class="secundario">Salir</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- VENTA -->
+    <div id="vistaVenta">
+      <div class="grid-2" style="align-items:start;">
+        <div>
+          <h3 id="tituloListaProductos">Categorías</h3>
+          <button id="btnVolverCategorias" class="secundario oculto" style="width:auto;">&larr; Volver a categorías</button>
+          <div id="categoriasVenta" class="categorias-grid"></div>
+          <div id="listaProductos" class="oculto"></div>
+        </div>
+        <div>
+          <h3>Pedido actual</h3>
+          <label>Cliente (escanea su tarjeta o escribe el nombre)</label>
+          <input type="text" id="clienteInput" placeholder="Pasa la tarjeta por el lector">
+          <p id="clienteInfoVenta" class="cliente-info oculto"></p>
+          <div id="carritoLista"></div>
+          <div id="descuentoVenta"></div>
+          <p id="lineaDescuentoVenta" class="oculto"></p>
+          <p>Subtotal: S/ <span id="subTotalVenta">0.00</span></p>
+          <p>IGV (18%): S/ <span id="igvVenta">0.00</span></p>
+          <p><strong>Total: S/ <span id="totalVenta">0.00</span></strong></p>
+          <label>Método de pago</label>
+          <select id="metodoPago">
+            <option value="Efectivo">Efectivo</option>
+            <option value="Tarjeta">Tarjeta</option>
+            <option value="Yape/Plin">Yape/Plin</option>
+          </select>
+          <button id="btnGenerarBoleta">Generar boleta y cobrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESAS -->
+    <div id="vistaMesas" class="oculto">
+      <div class="mesas-layout">
+        <div class="tarjeta mesas-plano">
+          <div class="mesas-col" id="colMesas"></div>
+          <div class="mesas-col" id="colBarras"></div>
+        </div>
+        <div class="tarjeta">
+          <p id="mesaSinSeleccion">Selecciona una mesa o barra.</p>
+          <div id="mesaDetalle" class="oculto">
+            <h3 id="mesaTitulo" style="text-align:center;"></h3>
+            <div id="mesaPedidos"></div>
+            <label style="display:block; margin-top:12px;">Añadir producto</label>
+            <input type="text" id="mesaBuscar" placeholder="Escribe el nombre del producto">
+            <label>Obs</label>
+            <input type="text" id="mesaObs" maxlength="200" placeholder="Observaciones (ej. sin azúcar, para llevar)">
+            <div id="mesaResultados"></div>
+            <label>Cliente (escanea su tarjeta o escribe el nombre)</label>
+            <input type="text" id="mesaClienteInput" placeholder="Pasa la tarjeta por el lector">
+            <p id="clienteInfoMesa" class="cliente-info oculto"></p>
+            <div id="descuentoMesa"></div>
+            <p id="lineaDescuentoMesa" class="oculto"></p>
+            <p><strong><span id="mesaTotalLabel">Total</span>: S/ <span id="mesaTotal">0.00</span></strong></p>
+            <label>Método de pago</label>
+            <select id="mesaMetodoPago">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Tarjeta">Tarjeta</option>
+              <option value="Yape/Plin">Yape/Plin</option>
+            </select>
+            <button id="btnImprimirComanda" class="secundario">Imprimir comanda</button>
+            <button id="btnSepararCuenta" class="secundario">Separar cuenta</button>
+            <button id="btnPagarMesa">Pagar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VENTAS / DEVOLUCIONES -->
+    <div id="vistaVentasEmp" class="oculto">
+      <h3>Ventas de esta caja</h3>
+      <p>Selecciona cualquier boleta (que no esté ya devuelta) para hacer una devolución (anula la venta).</p>
+      <table>
+        <thead><tr><th>Boleta</th><th>Hora</th><th>Cliente</th><th>Productos</th><th>Pago</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody id="tablaVentasEmp"></tbody>
+      </table>
+    </div>
+
+    <!-- CLIENTES (tarjeta de fidelidad: 10 compras = 50%) -->
+    <div id="vistaClientes" class="oculto">
+      <div id="clientesLista">
+        <button id="btnRegistrarCliente" class="btn-registrar-cliente">Registrar cliente</button>
+        <div class="tarjeta clientes-panel">
+          <h3>Clientes</h3>
+          <div id="tablaClientes"></div>
+        </div>
+      </div>
+      <div id="clientesForm" class="tarjeta clientes-panel oculto">
+        <div class="grid-2">
+          <div><label>Nombre</label><input type="text" id="cliNombre" maxlength="100"></div>
+          <div><label>Apellidos</label><input type="text" id="cliApellidos" maxlength="100"></div>
+          <div><label>DNI</label><input type="text" id="cliDni" maxlength="20"></div>
+          <div><label>Número (opcional)</label><input type="text" id="cliTelefono" maxlength="30"></div>
+          <div><label>Correo (opcional)</label><input type="email" id="cliCorreo" maxlength="150"></div>
+        </div>
+        <button id="btnGenerarCodigo" type="button" class="secundario">Generar código de barras</button>
+        <div id="codigoPreview" class="codigo-preview oculto">
+          <canvas id="codigoCanvas"></canvas>
+          <button id="btnDescargarCodigo" type="button" class="btn-mini">Descargar imagen</button>
+        </div>
+        <div class="error oculto" id="errorCliente"></div>
+        <div class="grid-2">
+          <button id="btnCancelarCliente" class="secundario">Cancelar</button>
+          <button id="btnAnadirCliente">Añadir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="cuponFlotante" class="cupon-flotante oculto">CUPON DE 50% FELICIDADES</div>
+
+<script src="empleado.js"></script>
+</body>
+</html>

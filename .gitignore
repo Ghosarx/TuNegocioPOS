@@ -1,0 +1,41 @@
+# Dependencias y builds
+node_modules/
+dist/
+out/
+*.exe
+*.blockmap
+
+# Datos sensibles y configuracion local
+.env
+.env.*
+*.cfg
+negocio.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.sql.gz
+*.dump
+backups/
+*.xlsx
+*.xls
+*.csv
+
+# Claude
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
+
+# Graphify
+graphify-out/
+.graphify*
+
+# Logs y sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

@@ -1,0 +1,36 @@
+{
+  "name": "tu-negocio-pos",
+  "version": "1.0.0",
+  "description": "Sistema de punto de venta para tu negocio",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "mysql2": "^3.9.7"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.tunegocio.pos",
+    "productName": "Tu negocio POS",
+    "win": {
+      "target": "nsis",
+      "icon": "build-icon.png"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "db/connection.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      "db/schema.sql"
+    ]
+  }
+}

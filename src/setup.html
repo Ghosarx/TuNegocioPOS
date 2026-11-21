@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Configuración inicial</title>
+<link rel="stylesheet" href="style.css">
+<script src="boleta.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <h2>Configura tu negocio</h2>
+  <p>Solo se pide esta vez. Puedes dejar el logo vacío.</p>
+
+  <label>Logo</label>
+  <img src="assets/logo.png" alt="" class="logo-login" id="logoPreview">
+  <input type="file" id="logoInput" accept="image/png,image/jpeg,image/webp,image/gif">
+
+  <label>Nombre del negocio</label>
+  <input type="text" id="nombreInput" maxlength="60" placeholder="Tu negocio">
+
+  <label>Paleta de colores</label>
+  <div class="paletas" id="paletas"></div>
+  <div class="grid-4">
+    <div><label>Principal</label><input type="color" id="color-primary"></div>
+    <div><label>Acento</label><input type="color" id="color-accent"></div>
+    <div><label>Secundario</label><input type="color" id="color-secondary"></div>
+    <div><label>Fondo</label><input type="color" id="color-bg"></div>
+  </div>
+
+  <div class="error oculto" id="setupError"></div>
+  <button id="btnGuardar">Guardar y continuar</button>
+</div>
+
+<script src="setup.js"></script>
+</body>
+</html>
