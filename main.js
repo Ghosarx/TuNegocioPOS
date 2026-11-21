@@ -17,21 +17,16 @@ let permitirCierre = false;
 // Quien inicio sesion lo guarda el proceso principal, no la pantalla: cada
 // funcion de la base comprueba aqui el rol, y el id de usuario/caja sale de
 // la sesion, nunca de lo que mande la pantalla (que se podria manipular).
-let sesion = null; // { id, nombre, rol, pendiente: { password, pregunta } }
+let sesion = null; // { id, nombre, rol }
 
-const debeCambiarCredenciales = () => !!(sesion && (sesion.pendiente.password || sesion.pendiente.pregunta));
-
-function requiere(rol, fn, { aunquePendiente = false } = {}) {
+function requiere(rol, fn) {
   return async (e, data) => {
     if (!sesion || (rol && sesion.rol !== rol)) throw new Error('Sesión no válida. Vuelve a iniciar sesión.');
-    if (!aunquePendiente && debeCambiarCredenciales()) {
-      throw new Error('Primero cambia la contraseña y la pregunta de seguridad en "Mi cuenta".');
-    }
     return fn(e, data || {});
   };
 }
 const conSesion = (fn) => requiere(null, fn);
-const soloAdmin = (fn, opciones) => requiere('admin', fn, opciones);
+const soloAdmin = (fn) => requiere('admin', fn);
 const soloEmpleado = (fn) => requiere('empleado', fn);
 
 // Bloqueo tras varios intentos fallidos (login y recuperacion de contraseña).
@@ -58,11 +53,6 @@ const PASSWORD_MIN = 6;
 function errorPassword(p) {
   return typeof p === 'string' && p.length >= PASSWORD_MIN ? null : `La contraseña debe tener al menos ${PASSWORD_MIN} caracteres`;
 }
-
-// Credenciales con las que se crea el admin la primera vez (estan en el
-// README, asi que son publicas): se obliga a cambiarlas al entrar.
-const PASSWORD_INICIAL = 'admin123';
-const RESPUESTA_INICIAL = 'negocio';
 
 // En Windows, despues de navegar a una pagina nueva o de usar dialogos
 // nativos (confirm/prompt/alert), la ventana a veces pierde el foco de
@@ -168,7 +158,14 @@ async function conectarBd(cfg) {
   }
   pool.configurar(cfg);
   bdConectada = true;
-  await asegurarAdminInicial();
+  hayAdmin = await existeAdmin();
+}
+
+let hayAdmin = false;
+
+async function existeAdmin() {
+  const [rows] = await pool.query("SELECT id FROM usuarios WHERE rol = 'admin' AND activo = 1 LIMIT 1");
+  return rows.length > 0;
 }
 
 // ---------- DATOS DEL NEGOCIO (nombre, logo y colores) ----------
@@ -189,7 +186,11 @@ function ponerIconoNegocio() {
   if (mainWindow && negocio && negocio.logo) mainWindow.setIcon(nativeImage.createFromDataURL(negocio.logo));
 }
 
-const paginaInicial = () => (!leerNegocio() ? 'setup.html' : bdConectada ? 'login.html' : 'config-db.html');
+const paginaInicial = () => {
+  if (!leerNegocio()) return 'setup.html';
+  if (!bdConectada) return 'config-db.html';
+  return hayAdmin ? 'login.html' : 'inicio.html';
+};
 
 ipcMain.on('negocio', (e) => { e.returnValue = leerNegocio(); });
 
@@ -265,11 +266,10 @@ ipcMain.on('refocus-ventana', () => {
 // el driver respete ningun tamaño de pagina - que es justo lo que fallaba
 // con window.print()/webContents.print().
 //
-// Cantidad de caracteres por linea para el ancho de papel configurado. Es un
-// valor tipico para impresoras termicas de 80mm/72mm con la fuente por
-// defecto; si tu impresora usa una fuente mas chica/grande y el texto queda
-// desalineado, ajusta este numero.
-const ESCPOS_CARACTERES_POR_LINEA = 42;
+// Caracteres por linea segun el ancho imprimible (72 mm en papel de 80 mm,
+// 48 mm en papel de 58 mm) con la fuente por defecto de la impresora. Si el
+// texto sale desalineado, ajusta estos numeros.
+const caracteresPorLinea = (anchoMm) => (anchoMm < 60 ? 32 : 42);
 
 const ESC = 0x1B;
 const GS = 0x1D;
@@ -354,24 +354,27 @@ function construirBufferEscPos(lineas, anchoChars) {
 // marcada como predeterminada en Windows, y ademas suele haber varias
 // impresoras/virtuales instaladas (PDF, RustDesk, etc.) que no son la
 // termica real - dejar que Windows "adivine" cual usar no es confiable.
-async function obtenerNombreImpresora() {
+async function obtenerImpresora() {
   const impresoras = await mainWindow.webContents.getPrintersAsync();
+  let ancho = 72.1;
   try {
-    const [[config]] = await pool.query('SELECT impresora_nombre FROM configuracion_boleta WHERE id = 1');
+    const [[config]] = await pool.query('SELECT impresora_nombre, ancho_mm FROM configuracion_boleta WHERE id = 1');
+    if (config) ancho = Number(config.ancho_mm) || ancho;
     if (config && config.impresora_nombre) {
       // Si la guardada ya no existe (se desinstalo o se renombro), mandar a
       // otra seria adivinar: mejor avisar para que el admin elija la correcta.
       if (!impresoras.some(p => p.name === config.impresora_nombre)) {
         throw new Error(`La impresora configurada "${config.impresora_nombre}" ya no existe en este equipo. Elige la impresora térmica en Configuración de boleta (panel de administrador).`);
       }
-      return config.impresora_nombre;
+      return { nombre: config.impresora_nombre, ancho };
     }
   } catch (err) {
     if (err.message.startsWith('La impresora configurada')) throw err;
     console.error('No se pudo leer la impresora configurada, se intentara con la predeterminada.', err);
   }
   const predeterminada = impresoras.find(p => p.isDefault);
-  return (predeterminada || impresoras[0] || {}).name || null;
+  const nombre = (predeterminada || impresoras[0] || {}).name;
+  return nombre ? { nombre, ancho } : null;
 }
 
 ipcMain.handle('listar-impresoras', soloAdmin(async () => {
@@ -477,7 +480,7 @@ if (-not $ok) { Write-Error $err; exit 1 }
 // Impresion por el driver de Windows (no RAW): se usa solo para ventas en
 // efectivo, asi el driver aplica sus opciones (p. ej. abrir el cajon). La
 // pagina mide lo mismo que el contenido para que el corte caiga al final.
-function lineasAHtml(lineas) {
+function lineasAHtml(lineas, anchoMm) {
   const e = (s) => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const filas = (lineas || []).map(l => {
     const b = l.bold ? 'font-weight:bold;' : '';
@@ -488,19 +491,19 @@ function lineasAHtml(lineas) {
     const a = l.t === 'center' ? 'center' : (l.align === 'right' ? 'right' : 'left');
     return `<div style="text-align:${a};${b}">${e(l.text)}</div>`;
   }).join('');
-  return `<!doctype html><meta charset="utf-8"><body style="margin:0;padding:0 2mm;width:72mm;box-sizing:border-box;font:11px 'Courier New',monospace;color:#000">${filas}</body>`;
+  return `<!doctype html><meta charset="utf-8"><body style="margin:0;padding:0 2mm;width:${anchoMm}mm;box-sizing:border-box;font:11px 'Courier New',monospace;color:#000">${filas}</body>`;
 }
 
-async function imprimirConWindows(deviceName, lineas) {
+async function imprimirConWindows(deviceName, lineas, anchoMm) {
   const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
   try {
-    await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(lineasAHtml(lineas)));
+    await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(lineasAHtml(lineas, anchoMm)));
     const altoPx = await win.webContents.executeJavaScript('document.body.scrollHeight');
     await new Promise((resolve, reject) => win.webContents.print({
       silent: true,
       deviceName,
       margins: { marginType: 'none' },
-      pageSize: { width: 80000, height: Math.ceil(altoPx * 25400 / 96) + 15000 } // micras; +15mm para el cortador
+      pageSize: { width: Math.round((anchoMm + 8) * 1000), height: Math.ceil(altoPx * 25400 / 96) + 15000 } // micras; +15mm para el cortador
     }, (ok, motivo) => (ok ? resolve() : reject(new Error('Windows no pudo imprimir: ' + motivo)))));
   } finally {
     win.destroy();
@@ -510,14 +513,14 @@ async function imprimirConWindows(deviceName, lineas) {
 ipcMain.handle('imprimir-boleta', conSesion(async (_e, { lineas, porWindows }) => {
   try {
     if (!mainWindow) return { ok: false, error: 'No hay ventana' };
-    const printerName = await obtenerNombreImpresora();
-    if (!printerName) return { ok: false, error: 'No se encontró ninguna impresora' };
+    const impresora = await obtenerImpresora();
+    if (!impresora) return { ok: false, error: 'No se encontró ninguna impresora' };
     if (porWindows) {
-      await imprimirConWindows(printerName, lineas);
+      await imprimirConWindows(impresora.nombre, lineas, impresora.ancho);
       return { ok: true };
     }
-    const buffer = construirBufferEscPos(lineas, ESCPOS_CARACTERES_POR_LINEA);
-    await enviarBytesCrudosAImpresora(printerName, buffer);
+    const buffer = construirBufferEscPos(lineas, caracteresPorLinea(impresora.ancho));
+    await enviarBytesCrudosAImpresora(impresora.nombre, buffer);
     return { ok: true };
   } catch (err) {
     console.error('Error al imprimir boleta.', err);
@@ -533,25 +536,6 @@ ipcMain.on('salir-app', () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
-
-// Crea el usuario admin/admin123 la primera vez que se abre la app, si no existe ninguno.
-async function asegurarAdminInicial() {
-  try {
-    const [rows] = await pool.query("SELECT id FROM usuarios WHERE rol = 'admin' LIMIT 1");
-    if (rows.length === 0) {
-      const passHash = await bcrypt.hash(PASSWORD_INICIAL, 10);
-      const respHash = await bcrypt.hash(RESPUESTA_INICIAL, 10);
-      await pool.query(
-        `INSERT INTO usuarios (nombre, usuario, password_hash, rol, pregunta_seguridad, respuesta_seguridad_hash, activo)
-         VALUES (?, ?, ?, 'admin', ?, ?, 1)`,
-        ['Administrador', 'admin', passHash, '¿Cuál es el nombre de tu negocio?', respHash]
-      );
-      console.log('Usuario admin inicial creado: admin / admin123');
-    }
-  } catch (err) {
-    console.error('No se pudo verificar/crear el admin inicial. Revisa que MySQL este corriendo.', err);
-  }
-}
 
 // Descuenta (signo -1, al vender) o repone (signo 1, al devolver) los
 // insumos de cada linea segun su receta. Puede quedar en negativo a
@@ -571,15 +555,29 @@ function boletaNumero(id) {
 
 const texto = (v) => (typeof v === 'string' ? v.trim() : '');
 
-// ---------- LOGIN ----------
-async function credencialesPendientes(user, password) {
-  if (user.rol !== 'admin') return { password: false, pregunta: false };
-  return {
-    password: password === PASSWORD_INICIAL,
-    pregunta: !user.respuesta_seguridad_hash || await bcrypt.compare(RESPUESTA_INICIAL, user.respuesta_seguridad_hash)
-  };
-}
+// ---------- PRIMER ARRANQUE: crear el administrador ----------
+// Solo funciona mientras no exista ningun admin; deja la sesion iniciada para
+// seguir con la configuracion de la impresora.
+ipcMain.handle('admin-inicial-crear', async (_e, { nombre, usuario, password, pregunta, respuesta }) => {
+  if (!bdConectada) return { ok: false, error: 'Primero conecta la base de datos' };
+  if (await existeAdmin()) return { ok: false, error: 'Ya existe un administrador' };
+  if (!texto(nombre) || !texto(usuario)) return { ok: false, error: 'Completa tu nombre y el usuario' };
+  const errPass = errorPassword(password);
+  if (errPass) return { ok: false, error: errPass };
+  if (!texto(pregunta) || texto(respuesta).length < 3) return { ok: false, error: 'Completa la pregunta y una respuesta de al menos 3 caracteres' };
+  const [existe] = await pool.query('SELECT id FROM usuarios WHERE usuario = ?', [texto(usuario)]);
+  if (existe.length > 0) return { ok: false, error: 'Ese nombre de usuario ya existe' };
+  const [result] = await pool.query(
+    `INSERT INTO usuarios (nombre, usuario, password_hash, rol, pregunta_seguridad, respuesta_seguridad_hash, activo)
+     VALUES (?, ?, ?, 'admin', ?, ?, 1)`,
+    [texto(nombre), texto(usuario), await bcrypt.hash(password, 10), texto(pregunta), await bcrypt.hash(texto(respuesta).toLowerCase(), 10)]
+  );
+  hayAdmin = true;
+  sesion = { id: result.insertId, nombre: texto(nombre), rol: 'admin' };
+  return { ok: true, user: { id: result.insertId, nombre: texto(nombre), usuario: texto(usuario), rol: 'admin' } };
+});
 
+// ---------- LOGIN ----------
 ipcMain.handle('login', async (_e, { usuario, password }) => {
   const clave = 'login:' + texto(usuario).toLowerCase();
   const espera = segundosBloqueado(clave);
@@ -592,11 +590,10 @@ ipcMain.handle('login', async (_e, { usuario, password }) => {
     return { ok: false, error: 'Usuario o contraseña incorrectos' };
   }
   fallos.delete(clave);
-  const pendiente = await credencialesPendientes(user, password);
-  sesion = { id: user.id, nombre: user.nombre, rol: user.rol, pendiente };
+  sesion = { id: user.id, nombre: user.nombre, rol: user.rol };
   return {
     ok: true,
-    user: { id: user.id, nombre: user.nombre, usuario: user.usuario, rol: user.rol, pendiente }
+    user: { id: user.id, nombre: user.nombre, usuario: user.usuario, rol: user.rol }
   };
 });
 
@@ -624,10 +621,6 @@ ipcMain.handle('recuperar-password', async (_e, { usuario, respuesta, nuevaPassw
   if (errPass) return { ok: false, error: errPass };
   const [[user]] = await pool.query("SELECT * FROM usuarios WHERE usuario = ? AND rol = 'admin'", [texto(usuario)]);
   if (!user || !user.respuesta_seguridad_hash) return { ok: false, error: 'Usuario no encontrado' };
-  // La respuesta inicial esta publicada en el README: con ella no se recupera nada.
-  if (await bcrypt.compare(RESPUESTA_INICIAL, user.respuesta_seguridad_hash)) {
-    return { ok: false, error: 'La recuperación está desactivada porque la pregunta de seguridad es la inicial. Ingresa con tu contraseña y cámbiala en "Mi cuenta".' };
-  }
   if (!(await bcrypt.compare(texto(respuesta).toLowerCase(), user.respuesta_seguridad_hash))) {
     registrarFallo(clave);
     return { ok: false, error: 'Respuesta de seguridad incorrecta' };
@@ -639,7 +632,6 @@ ipcMain.handle('recuperar-password', async (_e, { usuario, respuesta, nuevaPassw
 });
 
 // "Mi cuenta" del admin: cambia la contraseña y/o la pregunta de seguridad.
-// Se permite aunque tenga credenciales pendientes (es justo para cambiarlas).
 ipcMain.handle('cambiar-password-propia', soloAdmin(async (_e, { passwordActual, nuevaPassword, pregunta, respuesta }) => {
   const [[user]] = await pool.query('SELECT * FROM usuarios WHERE id = ?', [sesion.id]);
   if (!user || !(await bcrypt.compare(String(passwordActual || ''), user.password_hash))) {
@@ -647,33 +639,27 @@ ipcMain.handle('cambiar-password-propia', soloAdmin(async (_e, { passwordActual,
   }
   const cambiaPassword = !!nuevaPassword;
   const cambiaPregunta = !!(texto(pregunta) || texto(respuesta));
-  if (sesion.pendiente.password && !cambiaPassword) return { ok: false, error: 'Por seguridad debes cambiar la contraseña inicial.' };
-  if (sesion.pendiente.pregunta && !cambiaPregunta) return { ok: false, error: 'Por seguridad debes cambiar la pregunta y respuesta de seguridad iniciales.' };
   if (!cambiaPassword && !cambiaPregunta) return { ok: false, error: 'No hay nada que cambiar' };
 
   if (cambiaPassword) {
     const errPass = errorPassword(nuevaPassword);
     if (errPass) return { ok: false, error: errPass };
-    if (nuevaPassword === PASSWORD_INICIAL) return { ok: false, error: 'Elige una contraseña distinta a la inicial' };
   }
   if (cambiaPregunta) {
     if (!texto(pregunta) || texto(respuesta).length < 3) return { ok: false, error: 'Completa la pregunta y una respuesta de al menos 3 caracteres' };
-    if (texto(respuesta).toLowerCase() === RESPUESTA_INICIAL) return { ok: false, error: 'Elige una respuesta distinta a la inicial' };
   }
 
   if (cambiaPassword) {
     await pool.query('UPDATE usuarios SET password_hash = ? WHERE id = ?', [await bcrypt.hash(nuevaPassword, 10), sesion.id]);
-    sesion.pendiente.password = false;
   }
   if (cambiaPregunta) {
     await pool.query(
       'UPDATE usuarios SET pregunta_seguridad = ?, respuesta_seguridad_hash = ? WHERE id = ?',
       [texto(pregunta), await bcrypt.hash(texto(respuesta).toLowerCase(), 10), sesion.id]
     );
-    sesion.pendiente.pregunta = false;
   }
-  return { ok: true, pendiente: sesion.pendiente };
-}, { aunquePendiente: true }));
+  return { ok: true };
+}));
 
 // ---------- INVENTARIO (admin: crear/editar/eliminar, empleado: solo lectura) ----------
 function errorProducto(nombre, categoria, precio) {

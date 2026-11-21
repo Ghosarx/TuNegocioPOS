@@ -1,6 +1,7 @@
 (async () => {
   const guardada = await window.api.dbConfigGuardada();
   if(!guardada) return;
+  document.getElementById('pasoDb').classList.add('oculto');
   // Ya habia una configuracion pero no conecto (MySQL apagado, clave cambiada...).
   document.getElementById('dbHost').value = guardada.host;
   document.getElementById('dbPort').value = guardada.port;

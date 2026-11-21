@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
 
   dbConfigGuardada: () => ipcRenderer.invoke('db-config-guardada'),
   dbConfigurar: (data) => ipcRenderer.invoke('db-configurar', data),
+  adminInicialCrear: (data) => ipcRenderer.invoke('admin-inicial-crear', data),
 
   mesasPedidosListar: () => ipcRenderer.invoke('mesas-pedidos-listar'),
   mesasPedidoAgregar: (data) => ipcRenderer.invoke('mesas-pedido-agregar', data),

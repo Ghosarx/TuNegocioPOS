@@ -44,18 +44,6 @@ document.getElementById('btnSalir').onclick = async () => {
   window.location.href = 'login.html';
 };
 
-// Con la contraseña o la pregunta de seguridad iniciales (publicas en el
-// README) solo se puede usar "Mi cuenta" hasta cambiarlas; el proceso
-// principal tambien bloquea todo lo demas.
-const pendiente = usuarioActual && usuarioActual.pendiente;
-const hayPendiente = !!(pendiente && (pendiente.password || pendiente.pregunta));
-function mostrarAvisoPendiente(){
-  const faltan = [pendiente.password && 'la contraseña', pendiente.pregunta && 'la pregunta y respuesta de seguridad'].filter(Boolean);
-  const aviso = document.getElementById('cuentaAvisoPendiente');
-  aviso.textContent = `Por seguridad, antes de usar el sistema cambia ${faltan.join(' y ')} (los valores iniciales son públicos).`;
-  aviso.classList.remove('oculto');
-}
-
 // ---------- INVENTARIO ----------
 function opcionesCategoria(seleccionada){
   return CATEGORIAS_PRODUCTOS.map(c =>
@@ -600,26 +588,9 @@ document.getElementById('btnCambiarMiPassword').onclick = async () => {
     return;
   }
   CAMPOS_CUENTA.forEach(id => document.getElementById(id).value = '');
-  if(hayPendiente){
-    usuarioActual.pendiente = res.pendiente;
-    sessionStorage.setItem('usuarioActual', JSON.stringify(usuarioActual));
-    if(!res.pendiente.password && !res.pendiente.pregunta){
-      alert('Datos actualizados. Ya puedes usar el sistema.');
-      window.location.reload();
-      return;
-    }
-    Object.assign(pendiente, res.pendiente);
-    mostrarAvisoPendiente();
-  }
   exitoEl.textContent = 'Datos actualizados correctamente';
   exitoEl.classList.remove('oculto');
 };
 
-if(hayPendiente){
-  Object.keys(tabs).forEach(k => { if(k !== 'cuenta') tabs[k].classList.add('oculto'); });
-  mostrarAvisoPendiente();
-  cambiarTab('cuenta');
-} else {
-  cargarYAplicarConfigBoleta();
-  cargarInventario();
-}
+cargarYAplicarConfigBoleta();
+cargarInventario();

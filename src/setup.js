@@ -1,9 +1,9 @@
 const PALETAS = {
   'Café': { primary: '#3f2312', accent: '#ad1f1b', secondary: '#da9544', bg: '#faf3e8' },
-  'Océano': { primary: '#1e3a5f', accent: '#0077b6', secondary: '#48cae4', bg: '#f1f7fb' },
-  'Bosque': { primary: '#1b4332', accent: '#2d6a4f', secondary: '#95d5b2', bg: '#f3faf5' },
-  'Uva': { primary: '#3c096c', accent: '#9d4edd', secondary: '#e0aaff', bg: '#f8f3fc' },
-  'Grafito': { primary: '#212529', accent: '#e63946', secondary: '#adb5bd', bg: '#f8f9fa' }
+  'Océano': { primary: '#1e3a5f', accent: '#c1121f', secondary: '#0077b6', bg: '#f1f7fb' },
+  'Bosque': { primary: '#1b4332', accent: '#bc4749', secondary: '#2d6a4f', bg: '#f3faf5' },
+  'Uva': { primary: '#3c096c', accent: '#c9184a', secondary: '#7b2cbf', bg: '#f8f3fc' },
+  'Grafito': { primary: '#212529', accent: '#e63946', secondary: '#495057', bg: '#f8f9fa' }
 };
 const CLAVES = ['primary', 'accent', 'secondary', 'bg'];
 let logo = null;

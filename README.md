@@ -5,20 +5,61 @@ Pensado para cafeterías, restaurantes y pequeños negocios con impresora térmi
 
 ## Funciones
 
-**Administrador**
-- Productos: agregar, editar precios y quitar
-- Insumos: inventario de materia prima (KG / LT / UND) que se descuenta al vender según la receta de cada producto
-- Empleados: crear, desactivar/reactivar y cambiar su contraseña
-- Ventas por fecha con total del día y resumen imprimible
-- Configuración de la boleta y de la impresora
-- Cambio de contraseña y pregunta de seguridad propias
+### Primer arranque guiado
+- Asistente de 4 pasos: logo, nombre y paleta de colores del negocio → conexión a MySQL → cuenta de administrador → impresora
+- 5 paletas listas (Café, Océano, Bosque, Uva, Grafito) o colores a tu gusto
+- El nombre y el logo del negocio aparecen en todas las pantallas, en la ventana y en las boletas
+- La base de datos y sus tablas se crean solas; no hay usuarios ni contraseñas por defecto
 
-**Empleado**
-- Apertura y cierre de caja con ticket de cierre
-- Venta rápida con carrito, descuento en % y boleta
-- Mesas y barras con pedidos abiertos y tiempo transcurrido
-- Devoluciones y reimpresión de boletas de su caja
-- Clientes con tarjeta de fidelidad por código de barras (la compra 10 lleva 50 % de descuento)
+### Ventas
+- **Venta rápida:** productos agrupados por categoría, carrito, cliente y DNI opcionales
+- **Mesas y barras:** plano con mesas y barras; cada pedido muestra el tiempo transcurrido y puede llevar observaciones (ej. "sin cebolla"). Los pedidos quedan guardados aunque se cierre la caja o el programa
+- **Métodos de pago:** efectivo, tarjeta y Yape/Plin
+- **Descuentos** en % en cualquier venta, que salen detallados en la boleta
+- **Devoluciones:** anula una boleta de la caja actual y repone los insumos
+- **Reimpresión** de cualquier boleta, marcada como copia
+- Totales con IGV (18 %) y monto en letras ("SON: DOCE Y 00/100 SOLES")
+
+### Caja
+- Apertura con monto inicial y cierre con efectivo esperado, totales por método de pago y ticket de cierre
+- Al cerrar avisa si quedan mesas sin cobrar
+- Se puede abrir una caja nueva sin volver a iniciar sesión
+
+### Fidelización de clientes
+- Registro de clientes (nombre, apellidos, DNI, teléfono y correo)
+- Cada cliente recibe un **código de barras EAN-13** propio que se puede descargar como imagen para imprimir su tarjeta
+- Cada compra con la tarjeta suma un sello; **la compra número 10 lleva 50 % de descuento** y la tarjeta vuelve a empezar
+- Aviso en pantalla cuando a un cliente le toca el descuento; el programa lo valida al cobrar, así que no se puede aplicar a mano
+
+### Lector de código de barras
+- Funciona con cualquier lector USB o inalámbrico que escriba como un teclado, sin configurar nada
+- Lee la tarjeta del cliente aunque el cursor esté en otro campo: el programa distingue la velocidad del lector de la de una persona
+
+### Ticketera (impresora térmica)
+- Impresión directa en ESC/POS (modo RAW): el papel se corta justo donde termina la boleta
+- Papel de **80 mm o 58 mm**
+- Las ventas en efectivo se imprimen por el driver de Windows para que abra el **cajón de dinero**
+- Boletas de venta, devolución, cierre de caja y resumen del día
+- Botón de impresión de prueba para cada tipo de boleta, sin hacer ventas reales
+- Impresora, tipo de letra, negrita y tamaño configurables desde el panel
+
+### Inventario
+- **Productos** con categoría y precio
+- **Insumos** (materia prima en KG, LT o unidades) que se descuentan solos al vender según la **receta** de cada producto y se reponen al devolver
+- Ajuste rápido del stock de insumos
+
+### Administración
+- Gestión de empleados: crear, desactivar/reactivar y cambiar su contraseña
+- Ventas de cualquier día con calendario, total del día y resumen imprimible
+- Cuenta del administrador con pregunta de seguridad para recuperar la contraseña
+
+### Seguridad
+- Contraseñas cifradas con bcrypt; bloqueo de 5 minutos tras 5 intentos fallidos
+- Los permisos de administrador y empleado se validan en el programa, no solo en la pantalla
+- Los precios y totales se calculan con los datos de la base, no con lo que envía la pantalla
+- Datos de conexión a MySQL cifrados con la cuenta de Windows
+- La versión instalada no tiene herramientas de desarrollador ni acceso a internet
+- Varias PCs pueden usar la misma base de datos en red
 
 ## Requisitos
 
@@ -40,7 +81,7 @@ npm install
 npm run build
 ```
 
-El instalador queda en `dist/Tu negocio POS Setup 1.0.0.exe`. Es un instalador NSIS normal
+El instalador queda en `dist/Tu negocio POS Setup 2.0.0.exe`. Es un instalador NSIS normal
 (Siguiente → Instalar). Ese archivo es lo único que necesitas copiar a la PC del negocio.
 
 Para cambiar el nombre del programa, la versión o el ícono antes de compilar, edita
@@ -55,19 +96,20 @@ Para cambiar el nombre del programa, la versión o el ícono antes de compilar, 
 
 ## Primer uso
 
-1. **Configuración inicial.** La primera vez que abres el programa aparece una pantalla para
-   poner el **logo**, el **nombre del negocio** y la **paleta de colores**. Solo sale una vez.
-   El nombre se usa en las pantallas y en las boletas.
-2. **Conectar la base de datos.** Ingresa servidor, puerto, usuario y contraseña de MySQL
-   (con XAMPP: `localhost`, `3306`, `root` y contraseña vacía). El programa crea solo la base
-   `pos` y sus tablas. Los datos se guardan cifrados con tu cuenta de Windows.
-3. **Ingresar como administrador** con:
-   - usuario: `admin`
-   - contraseña: `admin123`
+La primera vez que abres el programa, un asistente de 4 pasos te guía. No hay usuarios ni
+contraseñas por defecto.
 
-   Al entrar se te obliga a cambiar la contraseña y la pregunta de seguridad.
-4. Crea tus productos, insumos y empleados desde el panel de administrador.
-5. En **Boleta**, elige la impresora térmica y usa **Imprimir prueba**.
+1. **Tu negocio:** logo, nombre y paleta de colores. El nombre aparece en las pantallas y
+   en las boletas.
+2. **Base de datos:** servidor, puerto, usuario y contraseña de MySQL (con XAMPP:
+   `localhost`, `3306`, `root` y contraseña vacía). La base y las tablas se crean solas.
+3. **Administrador:** creas tu propia cuenta (nombre, usuario, contraseña y pregunta de
+   seguridad para recuperarla).
+4. **Impresora:** eliges la impresora térmica y el ancho del papel (80 mm o 58 mm), y puedes
+   imprimir una prueba. Este paso se puede dejar para después.
+
+Al terminar entras directo al panel de administrador. Ahí agregas productos, insumos y
+empleados. La impresora y el formato de la boleta se cambian luego en **Boleta**.
 
 ### Volver a configurar
 
@@ -78,9 +120,10 @@ Los datos locales se guardan en `%APPDATA%\Tu negocio POS\`:
 | `negocio.json` | Nombre, logo y colores | Bórralo y vuelve a abrir el programa |
 | `db.cfg` | Conexión a MySQL (cifrada) | Bórralo y vuelve a abrir el programa |
 
-Si pierdes la contraseña del admin, ejecuta en MySQL
-`DELETE FROM pos.usuarios WHERE usuario = 'admin';` y abre el programa: se vuelve a crear
-`admin` / `admin123`.
+Si olvidas la contraseña del admin, usa **Olvidé mi contraseña** en el login (pide la
+respuesta de seguridad). Si tampoco la recuerdas, ejecuta en MySQL
+`DELETE FROM pos.usuarios WHERE rol = 'admin';` y abre el programa: vuelve a aparecer el
+paso para crear el administrador.
 
 ## Base de datos
 
@@ -89,7 +132,7 @@ Si pierdes la contraseña del admin, ejecuta en MySQL
 
 1. Se conecta a MySQL.
 2. Ejecuta [`db/schema.sql`](db/schema.sql): crea la base `pos` y todas sus tablas.
-3. Crea el usuario `admin` / `admin123` si no existe.
+3. Si no hay ningún administrador, te lleva al paso para crearlo.
 
 Esto se repite cada vez que abres el programa y es seguro: solo crea lo que falta, nunca
 borra ni duplica datos. Así, si una versión nueva agrega tablas, se crean solas al abrirla.
@@ -121,14 +164,10 @@ permite conexiones remotas en MySQL.
 
 Las boletas se envían como ESC/POS en modo RAW a la impresora elegida en **Boleta**
 (o a la predeterminada de Windows). Las ventas en efectivo se imprimen por el driver de
-Windows para que pueda abrir el cajón. Si los montos salen desalineados, ajusta
-`ESCPOS_CARACTERES_POR_LINEA` en `main.js` (42 por defecto, para papel de 80 mm).
+Windows para que pueda abrir el cajón. El ancho del papel se elige en el primer arranque o
+en **Boleta** (72 mm imprimibles = papel de 80 mm, 48 mm = papel de 58 mm). Si los montos
+salen desalineados, ajusta `caracteresPorLinea` en `main.js` (42 y 32 caracteres).
 
-## Seguridad
-
-- Contraseñas con bcrypt; bloqueo de 5 minutos tras 5 intentos fallidos.
-- Los permisos por rol se validan en el proceso principal, no en la pantalla.
-- La app instalada no tiene menú ni herramientas de desarrollador, y no navega a internet.
 
 ## Problemas comunes
 

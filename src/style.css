@@ -152,6 +152,7 @@ tbody tr { transition: background var(--fast) var(--ease); }
 tbody tr:hover { background: var(--secondary-light); background: color-mix(in srgb, var(--secondary) 10%, transparent); }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.paso { margin: 0 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--secondary-dark); }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 input[type="color"] { height: 40px; padding: 2px; cursor: pointer; }
 .paletas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 4px 0 12px; }
